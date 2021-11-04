@@ -10,7 +10,7 @@ var game = {
   onload: function () {
     // Initialize the video.
     if (
-      !me.video.init(2500, 2253, { parent: 'screen', scale: 'auto', scaleMethod: 'flex-width' })
+      !me.video.init(1800, 1500, { parent: 'screen', scale: 'auto', scaleMethod: 'flex-width' })
     ) {
       alert('Your browser does not support HTML5 canvas.');
       return;
@@ -37,6 +37,7 @@ var game = {
     // add our player entity in the entity pool
     me.pool.register('mainPlayer', game.PlayerEntity);
     me.pool.register('granny', game.Granny);
+    me.pool.register('Dialogue', game.Dialogue);
     me.pool.register('CoatEntity', game.CoatEntity);
     me.pool.register('EnemyEntity', game.EnemyEntity);
 

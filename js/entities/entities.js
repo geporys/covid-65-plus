@@ -1,3 +1,15 @@
+const texts = {
+  sk1: [
+    'Ах, какой вчера концерт был! Сказка, просто сказка. Сто лет никуда не ходила, даже гулять почти перестала. Пошла — и сразу какая красота!',
+    'Надо расшевелить себя немного. Пойду я на улицу выскочу. Ха, выскочу, конечно! Скакунья. Ноги-то болят совсем сильно. Ну это из-за того, что не гуляю. Разминаться надо, да и воздухом дышать тоже.',
+    'Вот был карантин — так я в четырех стенах сидела и вообще никуда не ходила. Но как же это тяжело было. Да, тяжело.',
+  ],
+  sk2: [
+    'Я не понимаю ничего. Вот ведь, суток не прошло, как я на концерте была. И уже из дома не выйдешь!',
+    'Как же надоел этот ковид. Как с детьми малыми с нами, ей богу. Сама я что ли не знаю, куда надо, а куда не надо ходить? ',
+  ],
+};
+
 /**
  * Player Entity
  */
@@ -101,10 +113,13 @@ game.PlayerEntity = me.Entity.extend({
         if (response.overlapV.y > 0 && this.body.falling) {
           // bounce (force jump)
           this.body.vel.y = -this.body.maxVel.y;
+          this.body.vel.x = 0;
           // play some audio
           me.audio.play('stomp');
         } else {
           // let's flicker in case we touched an enemy
+          this.body.vel.x = 0;
+
           this.renderable.flicker(750);
         }
         return false;
@@ -187,13 +202,18 @@ game.Granny = me.Entity.extend({
    * colision handler
    */
   onCollision: function (response, other) {
+    if (response.b.body.collisionType === 4) {
+      this.body.accel.x = 0;
+      return true;
+    } else {
+      this.body.accel.x = 4;
+    }
     switch (response.b.body.collisionType) {
       case me.collision.types.WORLD_SHAPE:
         // Simulate a platform object
         if (other.type === 'platform') {
           if (
             this.body.falling &&
-            !me.input.isKeyPressed('down') &&
             // Shortest overlap would move the player upward
             response.overlapV.y > 0 &&
             // The velocity is reasonably fast enough to have penetrated to the overlap depth
@@ -213,11 +233,16 @@ game.Granny = me.Entity.extend({
         if (response.overlapV.y > 0 && this.body.falling) {
           // bounce (force jump)
           this.body.vel.y = -this.body.maxVel.y;
+          response.overlapV.x = 0;
+          this.body.vel.x = 0;
+
           // play some audio
           me.audio.play('stomp');
         } else {
           // let's flicker in case we touched an enemy
-          this.renderable.flicker(750);
+          // this.renderable.flicker(750);
+          response.overlapV.x = 0;
+          this.body.vel.x = 0;
         }
         return false;
         break;
@@ -229,6 +254,55 @@ game.Granny = me.Entity.extend({
 
     // Make the object solid
     return true;
+  },
+});
+
+game.Dialogue = me.Entity.extend({
+  init: function (x, y, settings) {
+    this.stepIndex = 1;
+    this.step = settings.getObjectPropertyByName('stage');
+    console.log(this.step, texts[this.step]);
+    game.data.text = texts[this.step][0];
+
+    this._super(me.Entity, 'init', [x, y, settings]);
+  },
+  onCollision: function (response) {
+    console.log(response);
+    if (game.data.text !== texts[this.step][this.stepIndex]) {
+      let el = document.getElementById('text');
+
+      if (el) {
+        el.remove();
+      }
+
+      const template = document.createElement('div');
+      template.id = 'text';
+      template.style =
+        'width: 100%; height: 200px; position: absolute; bottom: 24px; text-align: center;font-size: 40px;padding: 0px 6px;';
+
+      template.innerHTML = game.data.text;
+      document.body.appendChild(template);
+
+      window.document.body.onkeyup = (e) => {
+        if (e.keyCode === 32) {
+          if (this.stepIndex === texts[this.step].length) {
+            let el = document.getElementById('text');
+            if (el) {
+              el.remove();
+            }
+            this.body.setCollisionMask(me.collision.types.NO_OBJECT);
+            // remove it
+            me.game.world.removeChild(this);
+            window.document.body.onkeyup = null;
+          } else {
+            game.data.text = texts[this.step][this.stepIndex];
+            this.stepIndex++;
+          }
+        }
+      };
+    }
+
+    return false;
   },
 });
 
@@ -247,8 +321,6 @@ game.CoatEntity = me.CollectableEntity.extend({
   onCollision: function (response, other) {
     // do something when collide
     me.audio.play('cling');
-    // give some score
-    game.data.score += 250;
     // make sure it cannot be collected "again"
     this.body.setCollisionMask(me.collision.types.NO_OBJECT);
     // remove it
@@ -326,7 +398,7 @@ game.EnemyEntity = me.Entity.extend({
       // res.y >0 means touched by something on the bottom
       // which mean at top position for this one
       if (this.alive && response.overlapV.y > 0 && response.a.body.falling) {
-        this.renderable.flicker(750);
+        // this.renderable.flicker(750);
       }
       return false;
     }
